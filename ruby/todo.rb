@@ -1,6 +1,6 @@
 #!/usr/bin/ruby
 #
-require './items.rb'
+require_relative 'items'
 
 class ToDoCli
 
