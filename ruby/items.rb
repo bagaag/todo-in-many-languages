@@ -1,6 +1,7 @@
 require 'json'
 require 'date'
 
+# represents an item in the to do list 
 class Item
   attr_accessor :description
   attr_accessor :completed
@@ -14,7 +15,11 @@ class Item
   end
 end
 
+
+# represents the to do list and provides crud methods
 class Items
+
+  # transforms json data into an in-memory to do list
   def initialize( json = '{"items":[]}' )
     @all = []
     json_obj = JSON.parse( json )
@@ -27,6 +32,7 @@ class Items
     reindex
   end
 
+  # returns a hashmap representation of the list
   def to_h
     ret = { :items => [] }
     @all.each do |item|
@@ -38,10 +44,12 @@ class Items
     return ret
   end
 
+  # returns a json representation of the list
   def to_json
     JSON.generate( self.to_h )
   end
 
+  # updates the index - should be called when list items change
   def reindex
     index = 1
     @all.each {|item|
@@ -52,11 +60,13 @@ class Items
     }
   end
 
+  # adds an item to the list
   def add( description )
     @all.push( Item.new( description ) )
     reindex
   end
 
+  # edits an existing item in the list at the specified 1-based index
   def edit( index, description )
     item = at(index)
     if item
@@ -66,6 +76,7 @@ class Items
     end
   end 
 
+  # completes the list item specified by the 1-based index
   def complete( index )
     item = at(index)
     if item
@@ -77,23 +88,30 @@ class Items
     reindex
   end
 
+  # removes comleted items from the list
   def clear
-    @all.delete_if {|item| item.completed }
+    count = @all.length
+    @all.delete_if {|item| item.completed} 
+    return count - @all.length
   end
 
+  # returns all list items
   def all
     @all
   end
 
+  # returns list item at the specified 1-based index
   def at (ix) 
-    items = @all.filter { |item| item.index == ix }
+    items = @all.filter { |item| item.index == ix.to_i }
     items[0]
   end
 
+  # returns list of completed items
   def completed
-    @all.filter { |item| item.completed }
+    @all.filter { |item| item.completed }.sort_by(&:completed)
   end
 
+  # returns list of active list items
   def list
     @all.filter { |item| not item.completed }
   end

@@ -1,4 +1,4 @@
-require_relative 'item'
+require_relative 'items'
 require 'test/unit'
 
 # I don't normally write test cases, but Ruby devs
