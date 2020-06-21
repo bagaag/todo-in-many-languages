@@ -17,7 +17,7 @@ class ToDoCli
   # opens list from file storage
   def open_list 
     # items are stored in the ~/.todo file
-    @file = File.expand_path('~') + '/.todo'
+    @file = File.expand_path('.') + '/.todo'
 
     # read saved list data
     if File.exist?(@file)
