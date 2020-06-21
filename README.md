@@ -1,3 +1,5 @@
 # Console To Do List in different programming languages
 
-See <https://bagaag.com/programming/todo.html>
+Simple terminal-based todo list application written in different programming languages just for fun and learning.
+
+For additional blahbidiblah, see <https://bagaag.com/programming/todo.html>
