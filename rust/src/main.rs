@@ -1,5 +1,5 @@
 //use std::io;
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Utc, Datelike};
 use json::{object};
 use std::fs::File;
 use std::io::prelude::*;
@@ -65,10 +65,36 @@ impl Items {
     }
 }
 
+fn date_to_string(d: &DateTime<Utc>) -> String {
+    format!("{}-{:02}-{:02}", d.year(), d.month(), d.day())
+}
+
+fn print_list(list: &[Item]) {
+    for item in list {
+        println!("{}", item.description);
+    }
+}
+
+fn print_completed(list: &[Item]) {
+    for item in list {
+        if item.completed.is_some() {
+            let dt: DateTime<Utc> = item.completed.unwrap();
+            let ds = date_to_string(&dt);
+            println!("{} / {}", item.description, ds);
+        }
+    }
+}
+
 fn main() {
     println!("WIP");
     let mut items = Items::new();
     items.add(String::from("Hey now."));
+    items.add(String::from("Susan smells."));
+    println!("<List>");
+    print_list(items.all());
+    println!("</List>");
+    let dt: DateTime<Utc> = Utc::now();
+    println!("Date: {}", date_to_string(&dt));
     let json = items.to_json();
     println!("{}", json);
 	items.save();
