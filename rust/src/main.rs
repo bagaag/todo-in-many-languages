@@ -1,189 +1,67 @@
-//use std::io;
+mod todo;
 
-use chrono::{DateTime, Utc, Datelike};
-use json::{object};
 use std::env;
-use std::fs::File;
-use std::io::prelude::*;
-use std::path::Path;
+use crate::todo::{Items};
 
 // where to save the list
 static DATAFILE: &str = ".todo";
 
-// A to do list item
-#[derive(Debug)]
-struct Item {
-    description: String,
-    completed: Option<DateTime<Utc>>
-}
-impl Item {
-    fn complete(&mut self) {
-        let now: DateTime<Utc> = Utc::now();
-        self.completed = Some(now);
-    }
 
-}
-
-// A to do list
-#[derive(Debug)]
-struct Items {
-    items: Vec<Item>
-}
-impl Items {
-    fn new() -> Items {
-        Items { items: Vec::new() }
-    }
-
-    fn all(&self) -> &[Item] {
-        self.items.as_ref()
-    }
-
-    fn add(&mut self, desc: String) {
-        self.items.push( 
-            Item { 
-                description: desc, 
-                completed: Option::None 
-            } 
-        );
-    }
-    
-    fn at(&self, target: u32) -> Option<&Item> {
-        let mut ix = 0;
-        for item in self.items.iter() {
-            if item.completed.is_none() {
-                ix = ix + 1;
-                if ix == target {
-                    return Some(item);
-                }
-            }
-        }
-        None
-    }
-
-    fn edit_at(&mut self, target: u32, desc: String ) -> Option<&Item> {
-        let mut ix = 0;
-        for mut item in self.items.iter_mut() {
-            if item.completed.is_none() {
-                ix = ix + 1;
-                if ix == target {
-                    item.description = desc;
-                    return self.at(target);
-                }
-            }
-        }
-        None
-    }
-
-    fn complete_at(&mut self, target: u32 ) -> Option<&Item> {
-        let mut ix = 0;
-        for item in self.items.iter_mut() {
-            if item.completed.is_none() {
-                ix = ix + 1;
-                if ix == target {
-                    item.complete();
-                    return self.at(target);
-                }
-            }
-        }
-        None
-    }
-
-    fn to_json(&self) -> String {
-        let mut data = object!{ items: [] };
-        for item in self.all() {
-            let item = object!{
-                description: &item.description[..],
-                completed: match item.completed {
-                    Some(date_value) => json::JsonValue::String(date_value.to_string()),
-                    None => json::Null
-                }
-            };
-            data["items"].push(item).expect("Sorry, you have too much to do.");
-        }
-        data.dump()
-    }
-
-    fn save(&self) {
-        let path = Path::new(DATAFILE);
-		let display = path.display();
-		let mut file = match File::create(&path) {
-			Err(why) => panic!("Error: Couldn't create file to save list at {}: {}", display, why),
-			Ok(file) => file,
-    	};
-		match file.write_all(self.to_json().as_bytes()) {
-			Err(why) => panic!("Error: Couldn't write list to file at {}: {}", display, why),
-			Ok(_) => (),
-		}
-    }
-
-    fn load(&self, filename: &str) {
-        let path = Path::new(DATAFILE);
-		let display = path.display();
-		let mut file = match File::open(&path) {
-			Err(why) => panic!("couldn't open {}: {}", display, why),
-			Ok(file) => file
-		};
-	    let mut s = String::new();
-    	match file.read_to_string(&mut s) {
-			Err(why) => panic!("couldn't read {}: {}", display, why),
-			Ok(_) => ()
-	    }
-    }
-}
-
-fn date_to_string(d: &DateTime<Utc>) -> String {
-    format!("{}-{:02}-{:02}", d.year(), d.month(), d.day())
-}
-
-fn print_list(list: &[Item]) {
-    let mut ix = 1;
-    for item in list {
-        println!("{:>2}. {}", ix, item.description);
-        ix = ix + 1;
-    }
-}
-
-fn print_completed(list: &[Item]) {
-    for item in list {
-        if item.completed.is_some() {
-            let dt: DateTime<Utc> = item.completed.unwrap();
-            let ds = date_to_string(&dt);
-            println!("{} - {}", ds, item.description);
-        }
-    }
-}
-
-/*
-fn test() {
-    let mut items = Items::new();
-    items.add("Hey now.".to_string());
-    items.add("Hey now, a GEEEEin.".to_string());
-    print_list(items.all());
-    let item = items.edit_at(1, "Nope.".to_string());
-    if item.is_some() {
-        println!("Item 1: {}", item.unwrap().description);
-    } else {
-        println!("Item 1 not found :(");
-    }
-    items.complete_at(1);    
-    items.complete_at(1);
-    print_completed(items.all());
-    let json = items.to_json();
-    println!("{}", json);
-	items.save();
-}
-*/
-
+// main program flow
 fn main() {
+    // create and populate items struct
     let mut items = Items::new();
-    items.load();
+    items.load(DATAFILE);
+    // parse cli args
     let args: Vec<String> = env::args().collect();
     let mut cmd = "list";
     if args.len() > 1 {
         cmd = &args[1];
     }
+    // act on given command
     if cmd == "list" {
-        println!("list");
+        items.print_list();
+    }
+    else if cmd == "add" && args.len() > 2 {
+        let the_rest = args[2..].join(" ").to_string();
+        items.add(the_rest);
+        items.print_list();
+        items.save(DATAFILE);
+    }
+    else if cmd == "edit" && args.len() > 3 {
+        let ix: u32 = args[2].parse().unwrap();
+        let the_rest = args[3..].join(" ").to_string();
+        items.edit_at(ix, the_rest);
+        items.print_list();
+        items.save(DATAFILE);
+    }
+    else if cmd == "complete" && args.len() == 3 {
+        let ix:u32 = args[2].to_string().parse().unwrap();
+        items.complete_at(ix);
+        items.print_list();
+        items.save(DATAFILE);
+    }
+    else if cmd == "completed" {
+        items.print_completed();
+    }
+    else if cmd == "clear" {
+        let count = items.clear();
+        println!("{} completed items cleared.", count);
+        items.save(DATAFILE);
+    }
+    else if cmd == "help" {
+        let help: String = 
+"Usage: todo <cmd> <args>
+
+Commands:
+  list                      Displays active list items.
+  add <description>         Adds an item to the list.
+  edit <num> <description>  Replaces a numbered item in the list.
+  complete <num>            Completes the numbered item.
+  completed                 Displays completed items.
+  clear                     Deletes completed items.
+  help                      Displays this message.".to_string();
+        println!("{}", help);
     }
     else { 
         println!("Sorry, {} is not a valid command. Try 'help'.", cmd);
