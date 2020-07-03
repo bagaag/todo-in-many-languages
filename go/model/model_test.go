@@ -1,6 +1,9 @@
 package model
 
-import "testing"
+import (
+  "testing"
+  "os"
+)
 
 // ----------------
 // removeItem Tests
@@ -31,10 +34,10 @@ func TestRemoveItem(t *testing.T) {
 func TestAdd(t *testing.T) {
   list := List{}
   list.Add("item 1")
-  if len(list.items) != 1 {
-    t.Errorf("want len = 1 after add, got %d", len(list.items))
+  if len(list.Items) != 1 {
+    t.Errorf("want len = 1 after add, got %d", len(list.Items))
   }
-  item := list.items[0]
+  item := list.Items[0]
   if item.Description != "item 1" {
     t.Errorf("want 'item 1', got %s", item.Description)
   }
@@ -45,19 +48,58 @@ func TestAdd(t *testing.T) {
 
 func TestComplete(t *testing.T) {
   list := List{}
-  if len(list.items) != 0 || len(list.completed) != 0 {
-    t.Errorf("want 0,0, got %d,%d", len(list.items), len(list.completed))
+  if len(list.Items) != 0 || len(list.Completed) != 0 {
+    t.Errorf("want 0,0, got %d,%d", len(list.Items), len(list.Completed))
   }
   list.Add("item 1")
-  if len(list.items) != 1 || len(list.completed) != 0 {
-    t.Errorf("want 1,0, got %d,%d", len(list.items), len(list.completed))
+  if len(list.Items) != 1 || len(list.Completed) != 0 {
+    t.Errorf("want 1,0, got %d,%d", len(list.Items), len(list.Completed))
   }
   list.Complete(0)
-  if len(list.items) != 0 || len(list.completed) != 1 {
-    t.Errorf("want 0,1, got %d,%d", len(list.items), len(list.completed))
+  if len(list.Items) != 0 || len(list.Completed) != 1 {
+    t.Errorf("want 0,1, got %d,%d", len(list.Items), len(list.Completed))
   }
-  time := list.completed[len(list.completed)-1].Completed
+  time := list.Completed[len(list.Completed)-1].Completed
   if time.IsZero() {
     t.Errorf("want Zero time, got %s", time)
+  }
+}
+
+func TestToJson(t *testing.T) {
+  list := List{}
+  list.Add("item")
+  expect := `{"Items":[{"Description":"item","Completed":"0001-01-01T00:00:00Z"}],"Completed":null}`
+  got := string(list.ToJson())
+  if expect != got {
+    t.Errorf("expected: %s\ngot: %s", expect, got)
+  }
+}
+
+func TestFromJson(t *testing.T) {
+  list := List{}
+  ba := []byte(`{"Items":[{"Description":"item","Completed":"0001-01-01T00:00:00Z"}],"Completed":null}`)
+  err := list.FromJson(ba)
+  if err != nil {
+    t.Errorf("%s", err)
+  }
+  desc := list.Items[0].Description
+  if desc != "item" {
+    t.Errorf("expected 'item', got: %s", desc)
+  }
+}
+
+func TestPersistence(t *testing.T) {
+  path := "test_data"
+  listA := List{}
+  listA.Add("item")
+  listA.Save(path)
+  listB := List{}
+  listB.Load(path)
+  desc := listB.Items[0].Description
+  if desc != "item" {
+    t.Errorf("expected 'item', got: %s", desc)
+  }
+  if err := os.Remove(path); err != nil {
+    t.Errorf("could not delete test file %s", err)
   }
 }

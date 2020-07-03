@@ -1,18 +1,21 @@
 package model
 
 import (
-  //"fmt"
+  "encoding/json"
+  "io/ioutil"
   "time"
 )
 
+// Holds an item in the list
 type Item struct {
   Description string
   Completed time.Time // defaults to Time.Zero
 }
 
+// Holds the to do list and provides CRUD methods
 type List struct {
-  items []Item
-  completed []Item
+  Items []Item
+  Completed []Item
 }
 
 // go does not provide this very basic function for some reason
@@ -23,22 +26,61 @@ func removeItem(a []Item, ix int) (out []Item, item Item) {
   return
 }
 
-//func (list *List) Load(filename string) {
-//}
+// returns byte array json representation of list model
+func (list *List) ToJson() []byte {
+  ba, err := json.Marshal(list)
+  if err != nil {
+    panic(err)
+  }
+  return ba
+}
 
+// populates model from byte array json data
+func (list *List) FromJson(ba []byte) error {
+  return json.Unmarshal(ba, &list)
+}
+
+// writes json file with model contents
+func (list *List) Save(filename string) error {
+  ba := list.ToJson()
+  return ioutil.WriteFile(filename, ba, 0600)
+}
+
+// populates model from json file
+func (list *List) Load(filename string) error {
+  ba, err := ioutil.ReadFile(filename)
+  if err != nil {
+    return err
+  }
+  err = list.FromJson(ba)
+  return err
+}
+
+// adds an item to the list
 func (list *List) Add(desc string) {
-  // create item
   newItem := Item{Description: desc}
-  list.items = append(list.items, newItem)
+  list.Items = append(list.Items, newItem)
 }
 
+// updates the description of an item in the list
+func (list *List) Edit(ix int, desc string) {
+  item := &list.Items[ix]
+  item.Description = desc
+}
+
+// completes an item in the list
 func (list *List) Complete(ix int) {
-  items, item := removeItem(list.items, ix)
-  list.items = items
+  items, item := removeItem(list.Items, ix)
+  list.Items = items
   item.Completed = time.Now()
-  list.completed = append(list.completed, item)
+  list.Completed = append(list.Completed, item)
 }
 
-
+// deletes completed items and returns count cleared
+func (list *List) Clear() int {
+  count := len(list.Completed)
+  list.Completed = []Item{}
+  return count
+}
 
 
